@@ -1,4 +1,5 @@
 import sys,os
+import pickle
 
 from PyQt5.QtCore import Qt,QSize
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QToolBar, QToolButton, \
@@ -107,10 +108,12 @@ class Dataobj():
         ext = layer.GetExtent()
         featureCount = layer.GetFeatureCount()
         print('total features',featureCount)
+        type_str = None
         features = []
         for feat in layer:
             geom = feat.GetGeometryRef()
             if 'line' in geom.ExportToWkt().lower():
+                type_str = 'line'
                 print(geom)
                 points = geom.GetPointCount()
                 vertices = []
@@ -120,19 +123,25 @@ class Dataobj():
                     vertices.append([lon, lat])
                 features.append(vertices)
             elif 'poly' in geom.ExportToWkt().lower():
+                type_str = 'poly'
                 ring = geom.GetGeometryRef(0)
                 points = ring.GetPointCount()
                 vertices = []
                 for p in range(points):
                     lon, lat, z = ring.GetPoint(p)
-                    print([lon, lat])
+                    #print([lon, lat])
                     vertices.append([lon, lat])
                 features.append(vertices)
-            else:
-                print('point features arent supported')
-                self.msg_info('Point features arent supported')
-                break;
-        return {'extent': ext, 'features': features}
+            elif 'point' in geom.ExportToWkt().lower():
+                type_str = 'point'
+                #print('point features arent supported')
+                #self.msg_info('Point features arent supported')
+                vertices = []
+                lon, lat = geom.GetX(), geom.GetY()
+                vertices.append([lon, lat])
+                features.append(vertices)
+
+        return {'extent': ext, 'features': features, 'type':type_str}
 
 
 class DataobjRaster():
@@ -285,6 +294,7 @@ class Window(QMainWindow):
 
         #layers icons
         self.pict_vect_layer=os.path.join('resources','icovlayer.png')
+        self.pict_pnt_layer = os.path.join('resources', 'icoplayer.png')
         self.pict_rast_layer=os.path.join('resources','icorlayer.png')
         self.pict_unk_layer=os.path.join('resources','icoulayer.png')
         
@@ -404,7 +414,7 @@ class Window(QMainWindow):
     def saveSettings(self,set_dict=None,key=None,val=None):
         saved_dict = self.settings.value('data')
 
-        if set_dict==None and key==None and val==None:
+        if dict==None and key==None and val==None:
             print('Nothing to save')
         elif  key!=None and val!=None:
             print('Save key/value pair')
@@ -1117,7 +1127,10 @@ class Window(QMainWindow):
             if obj.type == 'tif':
                 path = self.pict_rast_layer
             elif obj.type == 'shp':
-                path = self.pict_vect_layer
+                if obj.data['type'] != 'point':
+                    path = self.pict_vect_layer
+                else:
+                    path = self.pict_pnt_layer
             else:
                 path = self.pict_unk_layer
 
@@ -1253,10 +1266,19 @@ class Window(QMainWindow):
                     dpy = (ext1[0][1] - ext1[2][1]) / rows1
                     x = [px/dpx for px in x]
                     y = [py/dpy for py in y]
-                    im1 = ax.plot(x, y, lc)
-
+                    # print('x=',x)
+                    # print('y=',y)
+                    if data['type'] != 'point':
+                        im1 = ax.plot(x, y, lc)
+                    else:
+                        im1 = ax.plot(x[0], y[0], 'bo')
                 else:
-                    im1 = ax.plot(x,y,lc)
+                    # print('x=', x)
+                    # print('y=', y)
+                    if data['type'] != 'point':
+                        im1 = ax.plot(x, y, lc)
+                    else:
+                        im1 = ax.plot(x[0], y[0], 'bo')
 
                 id_count += 1
 
@@ -1447,7 +1469,7 @@ class StatWindow(QWidget):
 
 #TODO WINDOW class for selecting file for analysis
 class selectFileWindow(QWidget):
-    def __init__(self, parent=None,ftype='tif'):
+    def __init__(self, parent=None,ftype='tif',gtype='line'):
         super().__init__()
         self.parent = parent
         txt_title=self.parent.language_dict['commands']['select_file_analysis_title'][self.parent.selected_language]
@@ -1468,6 +1490,14 @@ class selectFileWindow(QWidget):
         print(self.parent.data_storage.get_objects())
         for obj in self.parent.data_storage.get_objects():
             if obj.type == ftype:
+
+                #TODO select POINTS for certain type of analysis
+                if obj.type == 'shp':
+                    if obj.data['type'] != gtype:
+                        # print('obj.data[type]=',obj.data['type'])
+                        # print('gtype=',gtype)
+                        continue #ignore shp without default geometry
+
                 # add to list items
                 item1 = QListWidgetItem()  # need to copy theese items twice
                 print(obj.name)
@@ -2063,7 +2093,7 @@ class MapBrowser(QWidget):  # map browser
                 if len(self.coords) == 2:
                     return self.parent.coords
         except:
-            fprint('Unknown error, possibly no SRTM was opened')
+            print('Unknown error, possibly no SRTM was opened')
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
