@@ -288,10 +288,14 @@
     </line_det_gap_label>
 
     <mink_dens_label>
-        <rus>Разрешение (м/пикс)</rus>
-        <eng>Resolution (m/pix)</eng>
+        <rus>Разрешение растеризации (м/пикс)</rus>
+        <eng>Resolution of raster (m/pix)</eng>
     </mink_dens_label>
 
+    <radius_label>
+        <rus>Радиус вычислений (м)</rus>
+        <eng>Computation radius (m)</eng>
+    </radius_label>
 
     <line_load_preset_label>
         <rus>Пресет</rus>
@@ -349,8 +353,8 @@
     </density_map_set_tab_name>
 
     <density_fractal_set_tab_name>
-        <rus>Плотность и фрактальная размерность</rus>
-        <eng>Line density and fractal dimension</eng>
+        <rus>Генерация покрытий</rus>
+        <eng>Coverage generator</eng>
     </density_fractal_set_tab_name>
 
     <density_win_size_label>
@@ -538,6 +542,17 @@
         <rus>Выберите файл</rus>
         <eng>Select file</eng>
     </select_file_analysis_label>
+
+    <select_pred_file_analysis_label>
+        <rus>Выберите файлы предикторы</rus>
+        <eng>Select predictor files</eng>
+    </select_pred_file_analysis_label>
+
+    <select_target_file_analysis_label>
+        <rus>Выберите файл событий</rus>
+        <eng>Select target file</eng>
+    </select_target_file_analysis_label>
+
 
     <app_info_label>
         <rus>Программное обеспечение LEFA разработано Сергеем Л. Шевыревым ДВГИ ДВО РАН, Владивосток (c) 2023 г.</rus>
