@@ -19,6 +19,7 @@ import skimage.feature as skmf #canny filter will be taken from here
 from skimage.draw import line as drawline
 from skimage.color import rgb2gray
 from skimage.util import img_as_ubyte
+import math
 
 import copy
 #for hough filters
@@ -701,7 +702,7 @@ def rasterize_shp(lines,gdal_object=None,rasterData=None,wh = None):
 def rasterize_shp2(lines, extent=None, dpxy=None):
     # create binary of lines
     print('create binary of lines')
-    if extent!=None or dpxy != None:
+    if extent is not None or dpxy is not None:
         dpx, dpy = dpxy[0], dpxy[1]
     else:
         print('no resolution data provided')
@@ -868,7 +869,7 @@ def box_count_fn(img):
         img = input_to_8gray(img)
 
     h, w = np.shape(img)
-    box_size = min(h, w)
+    box_size = min(h, w)  # начальный размер клетки - половина стороны на 2
 
     # binarize image
     grad_array = np.zeros(np.shape(img))
@@ -997,7 +998,8 @@ def averaging_windows(func):
 
         data_dict = {'id':[],'X_left':[],
                      'Y_top':[],'X_right':[],
-                     'Y_bottom':[],spec_field:[]}
+                     'Y_bottom':[],'X_centroid':[],
+                     'Y_centroid':[],spec_field:[]}
 
         win_size = int(win_size // ((dpx+dpy)/2))
         #win_size = win_size
@@ -1015,10 +1017,12 @@ def averaging_windows(func):
 
                 #adding geometric fields
                 data_dict['id'].append(id)
-                data_dict['X_left'].append(left_x+(cc * win_size)*dpx)
-                data_dict['X_right'].append(left_x+(cc+1) * win_size*dpx)
-                data_dict['Y_top'].append(top_y - (rr * win_size) * dpy)
-                data_dict['Y_bottom'].append(top_y - (rr + 1) * win_size * dpy)
+                data_dict['X_left'].append(np.round((left_x+(cc * win_size)*dpx),2))
+                data_dict['X_right'].append(np.round((left_x+(cc+1) * win_size*dpx),2))
+                data_dict['Y_top'].append(np.round((top_y - (rr * win_size) * dpy),2))
+                data_dict['Y_bottom'].append(np.round((top_y - (rr + 1) * win_size * dpy),2))
+                data_dict['X_centroid'].append(np.round(((left_x+(cc * win_size)*dpx) + win_size/2 * dpx),2))
+                data_dict['Y_centroid'].append(np.round(((top_y - (rr * win_size) * dpy) - win_size/2 * dpx),2))
 
                 #adding param field
                 data_dict[spec_field].append(func(sub_matrix,dpxy=[dpx,dpy]))
@@ -1047,7 +1051,14 @@ def get_minkowski(img,win_size=10,
 def get_pixels_sum(img,win_size=10,
                       spec_field='spec',
                       gdal_obj=None,extent=None,dpxy=None):
-    return np.sum(img) *((dpxy[0]+dpxy[1])/2)
+    return np.sum(img)*((dpxy[0]+dpxy[1])/2)
+
+@averaging_windows
+def get_average_val(img,win_size=10,
+                      spec_field='spec',
+                      gdal_obj=None,extent=None,dpxy=None):
+    dpx, dpy = dpxy[0], dpxy[1]
+    return np.sum(img)/np.size(img)
 
 #launches when library runs as script
 
@@ -1309,8 +1320,69 @@ def detectFlowNetwork(srtm, accuracy):
 
     return flows
 
+#TODO heatmap
+def get_probability_matrix(x,y,xminmax,yminmax,grid_size,h,aoi_extent=None):
+    #GETTING X,Y MIN AND MAX
+    x_min=min(x)
+    x_max=max(x)
+    y_min=min(y)
+    y_max=max(y)
 
 
+    #CONSTRUCT GRID
+    if type(grid_size) == int:
+        grid_size = [grid_size, grid_size]
+
+    if aoi_extent is None:
+        x_grid=np.arange(xminmax[0],xminmax[1],grid_size[0])
+        y_grid=np.arange(yminmax[0],yminmax[1],grid_size[1])
+    else:
+        width = int((aoi_extent[1] - aoi_extent[0]) / grid_size[0])
+        heigth = int((aoi_extent[3] - aoi_extent[2]) / grid_size[1])
+        x_grid = np.linspace(xminmax[0], xminmax[1], width)
+        y_grid = np.linspace(yminmax[0], yminmax[1], heigth)
+    x_mesh, y_mesh = np.meshgrid(x_grid, y_grid)
+    #GRID CENTER POINT (arrays)
+    xc=x_mesh+(grid_size[0]/2)
+    yc=y_mesh+(grid_size[1]/2)
+
+    #FUNCTION TO CALCULATE INTENSITY WITH QUARTIC KERNEL
+    def kde_quartic(d,h):
+        dn=d/h
+        P=(15/16)*(1-dn**2)**2
+        return P
+
+    #PROCESSING
+    intensity_list=[]
+    pbar_window = ProgressBar()
+    for j in range(len(xc)):
+        pbar_window.doProgress(j, len(xc))
+        intensity_row=[]
+        for k in range(len(xc[0])):
+            kde_value_list=[]
+            for i in range(len(x)):
+                #CALCULATE DISTANCE
+                d=math.sqrt((xc[j][k]-x[i])**2+(yc[j][k]-y[i])**2)
+                #print(d)
+                if d<=h:
+                    p=kde_quartic(d,h)
+                else:
+                    p=0
+                kde_value_list.append(p)
+            #SUM ALL INTENSITY VALUE
+            p_total=sum(kde_value_list)
+            intensity_row.append(p_total)
+        intensity_list.append(intensity_row)
+
+    return np.array(intensity_list)
+
+
+def get_shp_extent(path_to_file):
+    driver = ogr.GetDriverByName('ESRI Shapefile');
+    data_source = driver.Open(path_to_file,0); # 0 means read-only. 1 means writeable.
+    layer = data_source.GetLayer();
+    x_min, x_max, y_min, y_max = layer.GetExtent();
+    return x_min, x_max, y_min, y_max;
 
 
 if __name__=='__main__':
