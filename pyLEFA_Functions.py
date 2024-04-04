@@ -1321,6 +1321,7 @@ def detectFlowNetwork(srtm, accuracy):
     return flows
 
 #TODO heatmap
+#made with https://www.geodose.com/2018/01/creating-heatmap-in-python-from-scratch.html
 def get_probability_matrix(x,y,xminmax,yminmax,grid_size,h,aoi_extent=None):
     #GETTING X,Y MIN AND MAX
     x_min=min(x)
