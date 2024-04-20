@@ -682,19 +682,33 @@ def rasterize_shp(lines,gdal_object=None,rasterData=None,wh = None):
     id_count = 0
     for l in new_lines:
         pbar_window.doProgress(id_count, len(new_lines))
-        p0, p1 = copy.deepcopy(l)
-        #rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
-        p0[0] = int((p0[0] - ext[0][0]) / dpx)
-        p0[1] = int((p0[1] - ext[0][1]) / dpy)
-        p1[0] = int((p1[0] - ext[0][0]) / dpx)
-        p1[1] = int((p1[1] - ext[0][1]) / dpy)
+        for pnt_n in range(len(l)-1):
+            try:
+                p0, p1 = l[pnt_n],l[pnt_n+1]
+                # rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+                p0[0] = int((p0[0] - ext[0][0]) / dpx)
+                p0[1] = int((p0[1] - ext[0][1]) / dpy)
+                p1[0] = int((p1[0] - ext[0][0]) / dpx)
+                p1[1] = int((p1[1] - ext[0][1]) / dpy)
 
-        #rr, cc = drawline(int((p0[1]-ext[2][1])/w), int((p0[0]-ext[0][0])/h), int((p1[1]-ext[2][1])/w), int((p1[0]-ext[0][0])/h))  # coordinates should be placed in that order
-        rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
-        try:
-            canvas_image[rr, cc] = 1
-        except:
-            print('wrong index!')
+                rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+                canvas_image[rr, cc] = 1
+            except:
+                print('wrong index or segment!')
+        # p0, p1 = copy.deepcopy(l)
+        # #rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+        # p0[0] = int((p0[0] - ext[0][0]) / dpx)
+        # p0[1] = int((p0[1] - ext[0][1]) / dpy)
+        # p1[0] = int((p1[0] - ext[0][0]) / dpx)
+        # p1[1] = int((p1[1] - ext[0][1]) / dpy)
+        #
+        # #rr, cc = drawline(int((p0[1]-ext[2][1])/w), int((p0[0]-ext[0][0])/h), int((p1[1]-ext[2][1])/w), int((p1[0]-ext[0][0])/h))  # coordinates should be placed in that order
+        # rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+        # try:
+        #     canvas_image[rr, cc] = 1
+        # except:
+        #     print('wrong index!')
+
         id_count +=1
     return np.flipud(canvas_image)
 
@@ -730,6 +744,37 @@ def rasterize_shp2(lines, extent=None, dpxy=None):
         id_count += 1
     return np.flipud(canvas_image)
 
+def rasterize_shp3(lines, extent=None, dpxy=None):
+    # create binary of lines
+    print('create binary of lines')
+    if extent is not None or dpxy is not None:
+        dpx, dpy = dpxy[0], dpxy[1]
+    else:
+        print('no resolution data provided')
+        return None
+    w = int((extent[1] - extent[0]) / dpx)
+    h = int((extent[3] - extent[2]) / dpy)
+    canvas_image = np.zeros([h, w])
+    new_lines = copy.deepcopy(lines)
+    pbar_window = ProgressBar()
+    id_count = 0
+    for l in new_lines:
+        pbar_window.doProgress(id_count, len(new_lines))
+        for pnt_n in range(len(l)-1):
+            try:
+                p0, p1 = l[pnt_n],l[pnt_n+1]
+                # rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+                p0[0] = int((p0[0] - extent[0]) / dpx)
+                p0[1] = int((p0[1] - extent[2]) / dpy)
+                p1[0] = int((p1[0] - extent[0]) / dpx)
+                p1[1] = int((p1[1] - extent[2]) / dpy)
+
+                rr, cc = drawline(p0[1], p0[0], p1[1], p1[0])  # coordinates should be placed in that order
+                canvas_image[rr, cc] = 1
+            except:
+                print('wrong index or segment!')
+        id_count += 1
+    return np.flipud(canvas_image)
 
 def saveGeoTiff(raster,filename,gdal_object,ColMinInd=0,RowMinInd=0): #ColMinInd,RowMinInd - start row/col for cropped images
     meas=np.shape(raster)
@@ -897,8 +942,15 @@ def box_count_fn(img):
 # функция возвращает log10(n) и log10(N) для ряда значений размера ячеек и его количества
 def box_size_num_log(box_size_list, box_count_list):
     # return np.log(1/box_size_list),np.log(box_count_list)
-    return np.log10(1 / box_size_list), np.log10(box_count_list)
+    box_size_list_log, box_count_list_log = [],[]
+    for bsl,bcl in zip(box_size_list,box_count_list):
+        if bcl != 0:
+            box_size_list_log.append(np.log10(1 / bsl))
+            box_count_list_log.append(np.log10(bcl))
+        else:
+            pass;
 
+    return box_size_list_log, box_count_list_log
 
 
 
