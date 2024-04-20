@@ -1,6 +1,6 @@
 <h1>PyLEFA (Lineament Extraction Fracture Analysis) v. 0.61a</h1>
 Analytical GUI remote sensing software for lineament detection and fracture analysis.
-Download Windows installation <a href='https://sourceforge.net/projects/pylefa/files/lefasetup.exe/download'>here</a>
+Download Windows installation <a href='https://sourceforge.net/projects/pylefa/files/pylefasetup061a.exe/download'>here</a>
 
 <h2>1.About pyLEFA Software</h2> 
 pyLEFA software is originally written in Python GUI application for satellite image (tested with Landsat and SRTM) analysis in Earth sciences. Lineament analysis is often being used for geological mapping, detecting natural hazards and prospecting of mineral resources. 
