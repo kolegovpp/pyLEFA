@@ -37,7 +37,7 @@ os.chdir(current_dir)
 # import user function
 from pyLEFA_Functions import gray2binary, detectPLineHough, detectPLineHough2, uniteLines2, lineKB, \
     createSHPfromDictionary, \
-    saveLinesShpFile, saveLinesShpFile2, rasterize_shp, rasterize_shp2, saveGeoTiff, get_minkowski, \
+    saveLinesShpFile, saveLinesShpFile2, rasterize_shp, rasterize_shp3, saveGeoTiff, get_minkowski, \
     get_pixels_sum, get_average_val, build_rose_diag, get_probability_matrix, get_shp_extent
 
 from pyLEFA_Functions import ProgressBar, GetExtent
@@ -243,10 +243,10 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         """Initializer."""
         super().__init__(parent)
-        self.setWindowTitle("pyLEFA 0.6a")
+
         self.resize(580, 70)
 
-        self.settings = QtCore.QSettings('FEGI', 'pyLEFA0.6a')
+        self.settings = QtCore.QSettings('FEGI', 'pyLEFA0.61a')
 
         # default settings dictionary
         defaults = {
@@ -395,6 +395,10 @@ class Window(QMainWindow):
                 self.selected_language = f.read()
             # reload language
             self.reset_language()
+
+        # set window title
+        title = self.language_dict['commands']['maint_title'][self.selected_language]
+        self.setWindowTitle(title)
 
         # populate language menu items
         for key in [*self.language_dict['languages']]:
@@ -889,7 +893,10 @@ class Window(QMainWindow):
 
     # this !!!function runs any type of analysis from file selection window on Ok
     def do_analysis(self):
-        print(self.current_method, 'method of analysis for', self.file_for_analysis[0], 'has been activated')
+        try:
+            print(self.current_method, 'method of analysis for', self.file_for_analysis[0], 'has been activated')
+        except:
+            print('None file was specified')
         # line, faults, density, minkowski
         if self.current_method == 'line':
             # select file name for analysis
@@ -1007,7 +1014,7 @@ class Window(QMainWindow):
                     lines2 = self.get_features_by_name_id(name=self.file_for_analysis[0])
                     extent = self.get_extent_by_name_id(name=self.file_for_analysis[0])
                     dpxy = [self.settings.value('data')['raster_res'], self.settings.value('data')['raster_res']]
-                    imBW = rasterize_shp2(lines2, extent=extent, dpxy=dpxy)
+                    imBW = rasterize_shp3(lines2, extent=extent, dpxy=dpxy)
                     # [[влx,влy],[нлx,нлy],[нпy, нпy],[впx, впy]]
                     ext = [[extent[0], extent[3]], [extent[0], extent[2]], [extent[1], extent[2]],
                            [extent[1], extent[3]]]
@@ -1039,7 +1046,7 @@ class Window(QMainWindow):
                 lines2 = self.get_features_by_name_id(name=self.file_for_analysis[0])
                 extent = self.get_extent_by_name_id(name=self.file_for_analysis[0])
                 dpxy = [self.settings.value('data')['raster_res'], self.settings.value('data')['raster_res']]
-                img = rasterize_shp2(lines2, extent=extent, dpxy=dpxy)
+                img = rasterize_shp3(lines2, extent=extent, dpxy=dpxy)
                 # gdal_obj = self.get_gdal_by_name_id(name=self.select_file_analysis)
                 # img = self.get_matrix_by_name_id(name=self.file_for_analysis)
 
@@ -1060,7 +1067,7 @@ class Window(QMainWindow):
         # TODO implement target variables computing and data table doing here
         elif self.current_method == 'data':
             csv_path = QFileDialog.getSaveFileName(self, ("Save datatable as"), '', ("csv file (*.csv)"))[0]
-            if csv_path[0] != '':
+            if csv_path != '':
                 print('start of data method')
                 # dictionary for values per layer
                 img_dict = {}
@@ -1100,7 +1107,7 @@ class Window(QMainWindow):
 
                 for file in self.file_for_analysis:
                     line_faults = self.get_features_by_name_id(name=file)
-                    img = rasterize_shp2(line_faults, extent=aoi_extent, dpxy=dpxy)
+                    img = rasterize_shp3(line_faults, extent=aoi_extent, dpxy=dpxy)
                     img_dict.update({file: img})
 
                 # data for analysis by image type
@@ -2514,7 +2521,7 @@ class MapBrowser(QWidget):  # map browser
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    path = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'pylefa_logo06.png')
+    path = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'pylefa_logo061.png')
     app.setWindowIcon(QIcon(path))
     win = Window()
     win.show()
