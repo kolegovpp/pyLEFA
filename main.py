@@ -1206,7 +1206,7 @@ class Window(QMainWindow):
                         self.update_list2storage()
                         break
 
-    def show_stat(self):
+        def show_stat(self):
         print('show stat was called')
         try:
             item_list = [item.text() for item in self.layers.layer_list.selectedItems()]
@@ -1217,6 +1217,11 @@ class Window(QMainWindow):
                 obj = self.get_obj_by_name_id(self, name=item_name)
                 for key in [*obj.__dict__]:
                     msg_info_text = msg_info_text + key + ':' + str(eval('obj.' + key)) + '\n'
+                    if key == 'data':
+                        msg_info_text = msg_info_text + 'features count' + ':'+str(len(obj.data['features']))+ '\n'
+
+
+
 
             self.showStatWin(msg=msg_info_text, title=item_list[0])
             print(msg_info_text)
