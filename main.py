@@ -30,6 +30,8 @@ try:
 except ModuleNotFoundError:
     from osgeo import gdal, ogr
 
+gdal.UseExceptions()
+
 # set proper current directory
 current_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 os.chdir(current_dir)
