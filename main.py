@@ -1206,7 +1206,7 @@ class Window(QMainWindow):
                         self.update_list2storage()
                         break
 
-        def show_stat(self):
+    def show_stat(self):
         print('show stat was called')
         try:
             item_list = [item.text() for item in self.layers.layer_list.selectedItems()]
